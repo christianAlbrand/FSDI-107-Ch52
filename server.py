@@ -1,5 +1,7 @@
 from flask import Flask, request
 import json
+from config import db
+from bson.objectid import ObjectId
 
 app = Flask(__name__)
 
@@ -35,16 +37,25 @@ def farewell(name):
 
 # ################################################
 products = []
+
+def fix_id(obj):
+    obj["_id"] = str(obj["_id"])
+    return obj
 @app.get("/api/products")
 def get_products():
-    return json.dumps(products)
+    products_db= []
+    cursor = db.products.find({})
+    for prod in cursor:
+        products_db.append(fix_id(prod))
+    return json.dumps(products_db)
 
 @app.post("/api/products")
 def save_products():
     item = request.get_json()
     print(item)
-    products.append(item)
-    return json.dumps(item)
+    # products.append(item)
+    db.products.insert_one(item)
+    return json.dumps(fix_id(item))
 
 @app.put("/api/products/<int:index>")
 def update_products(index):
@@ -74,5 +85,51 @@ def update_specific_element(index):
         return json.dumps(update_element)
     else:
         return "That index does not exist"
+    
+
+##########################
+#final report
+catalog = []
+
+@app.get("/api/catalog")
+def get_list_products():
+    catalog_db = []
+    cursor = db.catalog.find({})
+    for prod in cursor:
+        catalog_db.append(fix_id(prod))
+    return json.dumps(catalog_db)
+
+@app.post("/api/catalog")
+def save_list_products():
+    item = request.get_json()
+    print(item)
+    db.catalog.insert_one(item)
+    return json.dumps(fix_id(item))
+
+@app.delete("/api/catalog/<string:index>")
+def delete_products_catalog(index):
+    db.catalog.find_one_and_delete({"_id":ObjectId(index)})
+    return json.dumps(index)
+
+@app.get("/api/reports/total")
+def get_total_price_products():
+    total = 0
+    total_products = db.catalog.find({})
+    for prod in total_products:
+        total += prod["price"]
+    return json.dumps(total)
+
+@app.get("/api/products/<string:category>")
+def get_category_products(category):
+    all_products = db.catalog.find({})
+    filtered = []
+    for prod in all_products:
+        if "category" in prod and prod["category"] == category:
+            print(prod)
+            filtered.append(fix_id(prod))
+    if len(filtered) == 0:
+        return json.dumps("category not found")
+    return json.dumps(filtered)
+
 
 app.run(debug=True)
