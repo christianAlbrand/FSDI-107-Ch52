@@ -1,9 +1,11 @@
-from flask import Flask, request
+from flask import Flask, request, abort
 import json
 from config import db
 from bson.objectid import ObjectId
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app) # Warning this disables CORS policy
 
 @app.get("/")
 def home():
@@ -130,6 +132,52 @@ def get_category_products(category):
     if len(filtered) == 0:
         return json.dumps("category not found")
     return json.dumps(filtered)
+
+
+
+#######################################################
+###############  COUPONS  #############################
+#######################################################
+
+# post /api/cupons
+# save coupons into a db.coupons collection
+
+@app.post("/api/coupons")
+def post_products_coupons():
+    coup = request.get_json()
+    print(coup)
+    db.coupons.insert_one(coup)
+    return json.dumps(fix_id(coup))
+
+
+@app.get("/api/coupons")
+def get_products_coupons():
+    coup_db = []
+    cursor = db.coupons.find({})
+    for cp in cursor:
+        coup_db.append(fix_id(cp))
+    return json.dumps(coup_db)
+
+@app.delete("/api/coupons/<string:index>")
+def del_products_coupons(index):
+    db.coupons.find_one_and_delete({"_id":ObjectId(index)})
+    return json.dumps(index)
+
+@app.get("/api/coupons/<coupon>")
+def validate_coupon(coupon):
+    code = db.coupons.find_one({"coupon": coupon})
+    if code == None:
+        print("Error: invalid coupon")
+        return abort(404, "Invalid Code")
+    return json.dumps(fix_id(code))
+
+
+# get /api/coupons
+# read all the coupons and return them
+
+# coupon
+#  code
+#  discount
 
 
 app.run(debug=True)
