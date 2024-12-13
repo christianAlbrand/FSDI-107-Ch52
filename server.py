@@ -48,7 +48,8 @@ def get_products():
     products_db= []
     cursor = db.products.find({})
     for prod in cursor:
-        products_db.append(fix_id(prod))
+        if "title" in prod:
+            products_db.append(fix_id(prod))
     return json.dumps(products_db)
 
 @app.post("/api/products")
